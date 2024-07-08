@@ -7,7 +7,7 @@ class DataBase:
     def __init__(self, file_name='db.sqlite3'):
         self.file_name = file_name
         if self.checkDataBase():
-            print('Connect to DataSet...')
+            print('Connect to Database...')
             self.conn = sqlite3.connect(self.file_name)
         else:
             self.createDataBase()
@@ -27,50 +27,79 @@ class DataBase:
     def __del__(self):
         self.conn.close()
 
-    def check_table(self, table):
+    def __check_table(self, table):
         cursor = self.conn.cursor()
         cursor.execute(
             f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}';")
-        if cursor.fetchall():
-            print(f"Table {table} found")
-            return True
-        else:
-            print(f"Table {table} not found")
-            return False
+        return bool(cursor.fetchone())
 
+    def check_table(func):
+        def wrapper(self, table, *args, **kwargs):
+            if self.__check_table(table):
+                return func(self, table, *args, **kwargs)
+            else:
+                print(f"Table {table} not found")
+                return False
+        return wrapper
+
+    @check_table
     def add_table(self, table):
-        if not self.check_table(table):
-            cursor = self.conn.cursor()
-            cursor.execute(f'''
-                CREATE TABLE {table} (
-                    Date DATE PRIMARY KEY,
-                    Open REAL,
-                    High REAL,
-                    Low REAL,
-                    Close REAL,
-                    AdjClose REAL,
-                    Volume REAL
-                )
-            ''')
-            print("Create table")
+        cursor = self.conn.cursor()
+        cursor.execute(f'''
+            CREATE TABLE {table} (
+                Date DATE PRIMARY KEY,
+                Open REAL,
+                High REAL,
+                Low REAL,
+                Close REAL,
+                AdjClose REAL,
+                Volume REAL
+            )
+        ''')
+        print("Create table")
 
+    @check_table
     def max_min_value(self, table, column):
-        result = {"Max": None, "Min": None}
-        if self.check_table(table):
-            result = self.conn.execute(f'''
-                SELECT MIN({column}), MAX({column}) FROM {table}
-                                       ''').fetchone()
-            result = {"Max": result[0], "Min": result[1]}
-        return result
+        result = self.conn.execute(f'''
+            SELECT MIN({column}), MAX({column}) FROM {table}
+                                   ''').fetchone()
+        return {"Max": result[1], "Min": result[0]}
 
+    @check_table
     def insert_data(self, df, table):
         for _, row in df.iterrows():
             self.conn.execute(f'''
             INSERT OR IGNORE INTO {table} (Date,Open,High,Low,Close,AdjClose,Volume) VALUES (?, ?, ?, ?,?, ? , ?)
             ''', (row['Date'], row['Open'], row['High'], row['Low'], row['Close'], row['Adj Close'], row['Volume']))
-        else:
-            self.conn.commit()
-            print("add all data")
+        self.conn.commit()
+        print("add all data")
+
+    @check_table
+    def select_data(self, table, start=None, end=None):
+        cursor = self.conn.cursor()
+        result = self.max_min_value(table, "Date")
+        if start is None:
+            start = result["Min"]
+        if end is None:
+            end = result["Max"]
+
+        query = f"SELECT * FROM {table} WHERE Date BETWEEN '{start}' AND '{end}'"
+
+        cursor.execute(query)
+
+        rows = cursor.fetchall()
+        df = pd.DataFrame(
+            rows,
+            columns=[
+                "Date",
+                "Open",
+                "High",
+                "Low",
+                "Close",
+                "AdjClose",
+                "Volume"])
+        df.set_index("Date", inplace=True)
+        return df
 
 
 if __name__ == "__main__":
@@ -84,4 +113,6 @@ if __name__ == "__main__":
     # sql.insert_data(df, table)
 
     # result = sql.max_min_value(table, column)
+    # print(result)
+    # result = sql.select_data(table, start="2024-06-28",end="2024-07-03")
     # print(result)
