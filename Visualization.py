@@ -6,6 +6,7 @@ import plotly.express as px
 from DataBase import DataBase
 from plotly.subplots import make_subplots
 import numpy as np
+import pandas as pd
 
 
 class Visualization:
@@ -38,6 +39,19 @@ class Visualization:
 
         self.fig.add_trace(bar_chart, row=2, col=1)
 
+    def Moving_Average(
+            self,
+            data: pd.DataFrame,
+            window=5,
+            Colomn: str = "Close"):
+        mv = data["Close"].rolling(window=window).mean()
+        self.fig.add_trace(go.Scatter(
+            x=data.index,
+            y=mv,
+            mode="lines",
+            name=f"Moving Average {window}"
+        ), row=1, col=1)
+
     def show(self):
         self.fig.show()
 
@@ -50,9 +64,13 @@ if __name__ == "__main__":
     sql = DataBase()
     table = "MSFT"
     column = "Date"
-    data = sql.select_data(table, start="2024-05-28", end="2024-07-03")
+    start = "2024-02-28"
+    end = "2024-07-03"
+
+    data = sql.select_data(table, start=start, end=end)
     v = Visualization()
     v.Candlestick(data=data)
     v.Volome(data=data)
+    v.Moving_Average(data=data)
     # v.show()
     v.write_html()
