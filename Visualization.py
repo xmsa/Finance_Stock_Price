@@ -16,7 +16,7 @@ class Visualization:
                                  vertical_spacing=0.02,
                                  row_heights=[0.8, 0.2])
 
-    def Candlestick(self, data):
+    def Candlestick(self, data: pd.DataFrame):
         candlestick = go.Candlestick(x=data.index,
                                      open=data['Open'],
                                      high=data['High'],
@@ -27,7 +27,7 @@ class Visualization:
         # self.fig = go.Figure(candlestick)
         self.fig.update_layout(xaxis_rangeslider_visible=False)
 
-    def Volome(self, data):
+    def Volome(self, data: pd.DataFrame) -> None:
         color = np.where(data["Open"] <= data["Close"], "green", "red")
         color = np.where(data["Open"] == data["Close"], "yellow", color)
         bar_chart = go.Bar(
@@ -43,20 +43,24 @@ class Visualization:
             self,
             data: pd.DataFrame,
             window=5,
-            Colomn: str = "Close"):
+            Colomn: str = "Close") -> None:
         mv = data["Close"].rolling(window=window).mean()
-        self.fig.add_trace(go.Scatter(
+        mv_chart = go.Scatter(
             x=data.index,
             y=mv,
             mode="lines",
             name=f"Moving Average {window}"
-        ), row=1, col=1)
+        )
+        self.fig.add_trace(mv_chart, row=1, col=1)
 
-    def show(self):
+    def show(self) -> None:
         self.fig.show()
 
-    def write_html(self, auto_open=True):
-        self.fig.write_html('.cache/chart.html', auto_open=auto_open)
+    def write_html(
+            self,
+            path: str = '.cache/chart.html',
+            auto_open: bool = True) -> None:
+        self.fig.write_html(file=path, auto_open=auto_open)
 
 
 if __name__ == "__main__":
