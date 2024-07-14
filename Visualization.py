@@ -7,6 +7,7 @@ from DataBase import DataBase
 from plotly.subplots import make_subplots
 import numpy as np
 import pandas as pd
+from indicator import moving_Averages
 
 
 class Visualization:
@@ -43,13 +44,15 @@ class Visualization:
             self,
             data: pd.DataFrame,
             window=5,
-            Colomn: str = "Close") -> None:
-        mv = data["Close"].rolling(window=window).mean()
+            Colomn: str = "Close", simple=True) -> None:
+        mv = moving_Averages(data[Colomn], window=window, simple=simple)
+        name = "Simple" if simple else "Exponential"
+
         mv_chart = go.Scatter(
-            x=data.index,
+            x=mv.index,
             y=mv,
             mode="lines",
-            name=f"Moving Average {window}"
+            name=f"{name} Moving Average {window}"
         )
         self.fig.add_trace(mv_chart, row=1, col=1)
 
